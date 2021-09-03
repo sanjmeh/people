@@ -10,29 +10,48 @@ library(ggplot2)
 library(jsonlite)
 library(htmltools)
 library(rvest)
+library(googlesheets4)
+
+source('addrclust.R')
+
+# Prerequisites
+
+# Create a google cloud platform project and obtain an API key
+# Enable the API for geocodes on googleconsole  https://console.cloud.google.com/
+# assign the API KEY in a variable named apikey and save it in a file named 'keys.data' using save() function.
+
 
 load("keys.data")
 
 urlgeo <- "https://maps.googleapis.com/maps/api/geocode/json?address=embassy%20haven%20rt%20nagar%20bengaluru&key=ABC"
 
+# This will read the input file
+aptdt <-  fread("community_names.csv")
 
-# for a single address
-# pass a browser ready address with + sign separators
+# Please ensure the function compress_addr is sourced from anaother source file
+# this till add several columns to the input file. If the column name for apartment name is different paste it in the argument
+aptdt %<>% compress_addr(colname = 'Community Name')
 
-build_addr_url <- function(x,baseurl=urlgeo){
-    url_shell <- parse_url(urlgeo)
-    url_shell$query <-  list(address = x,key = apikey)
-    build_url(url_shell)
-}
 
-# pass an compressed address vector - uses the above function for multiple inputs
-build_all_googleapi_urls <- function(addr_vect) addr_vect %>% map(build_addr_url)
+# pass the compressed address vector to get as output the urls ready for firing
+build_googleapi_urls <- function(addr_vect = aptdt$google_addr){
+    build_addr_url <- function(x = aptdt$google_addr){
+        urlgeo <- "https://maps.googleapis.com/maps/api/geocode/json?address=embassy%20haven%20rt%20nagar%20bengaluru&key=ABC"
+        url_shell <- parse_url(urlgeo)
+        url_shell$query <-  list(address = x,key = apikey)
+        build_url(url_shell)
+    }
+    # Loop the function across all address vetors
+    addr_vect %>% map(build_addr_url)  
+} 
 
-# pass a vector of urls as obtained from above
+# this is the main function
+# pass a vector of urls as obtained from above - this will take time (~ 1 second per url), so restrict to 100 urls at a time
+# save the output in a variable
 fire_api <- function(x) x %>% map(~GET(url = .x))
 
     
-# pass the list of json (API output) content downloaded from the google api
+# pass the list of json objects (API output from fire_api() -  content downloaded from google maps and save the output in another variable
 pullstuffout <- function(apioutput){
 pullone <- function(x){
     cont <- content(x)
@@ -59,8 +78,7 @@ pullone <- function(x){
 apioutput %>%  map(pullone) %>% rbindlist 
 }
 
-# pull out ward number from BPAC site
-
+# pull out ward number from BPAC site - this is pretty fast - save the output in a variable
 which_ward <- function(lat=77,lon=12){
     base <- 'https://bpac.in/address.php?logi=77.6060171&lati=12.9344168'
     ulist <- parse_url(url = base)
@@ -70,5 +88,5 @@ which_ward <- function(lat=77,lon=12){
     x1.list[[1]][[2]]$p[[1]]
 }
 
-output96
-
+# add the wards obtained from the function which_ward() as a new column in the data.table variable and that is the final output
+# ensure that the length of the ward vector is the same as nrow() of the data.table
