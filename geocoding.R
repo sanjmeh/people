@@ -11,6 +11,7 @@ library(jsonlite)
 library(htmltools)
 library(rvest)
 library(googlesheets4)
+library(readxl)
 
 source('addrclust.R')
 
@@ -23,14 +24,15 @@ source('addrclust.R')
 
 load("keys.data")
 
-urlgeo <- "https://maps.googleapis.com/maps/api/geocode/json?address=embassy%20haven%20rt%20nagar%20bengaluru&key=ABC"
+# aptdt <-  fread("community_names.csv")
+data1 <- read_excel('Data_1.xlsx')
+setnames(data1,c("sn","area","address"))
 
-# This will read the input file
-aptdt <-  fread("community_names.csv")
-
-# Please ensure the function compress_addr is sourced from anaother source file
+# Please ensure the function compress_addr is sourced from another source file
 # this till add several columns to the input file. If the column name for apartment name is different paste it in the argument
-aptdt %<>% compress_addr(colname = 'Community Name')
+# aptdt %<>% compress_addr(colname = 'Community Name')
+
+#data1 %>% compress_addr(colname = 'addr') -> data1c
 
 
 # pass the compressed address vector to get as output the urls ready for firing
@@ -87,6 +89,8 @@ which_ward <- function(lat=77,lon=12){
     content(x1,type = 'text/xml',encoding = 'UTF-8') %>% xml2::as_list(.) -> x1.list
     x1.list[[1]][[2]]$p[[1]]
 }
+
+
 
 # add the wards obtained from the function which_ward() as a new column in the data.table variable and that is the final output
 # ensure that the length of the ward vector is the same as nrow() of the data.table
