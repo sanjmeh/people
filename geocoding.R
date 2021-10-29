@@ -25,8 +25,8 @@ source('addrclust.R')
 load("keys.data")
 
 # aptdt <-  fread("community_names.csv")
-data1 <- read_excel('Data_1.xlsx')
-setnames(data1,c("sn","area","address"))
+#data1 <- read_excel('Data_1.xlsx')
+#setnames(data1,c("sn","area","address"))
 
 # Please ensure the function compress_addr is sourced from another source file
 # this till add several columns to the input file. If the column name for apartment name is different paste it in the argument
