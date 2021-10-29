@@ -1,0 +1,132 @@
+---
+title: "BNP Lekkabeku"
+date: "17/09/2021"
+output: 
+    html_document:
+        css: leka.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(data.table)
+library(lubridate)
+library(tidyverse)
+library(magrittr)
+library(readxl)
+library(googlesheets4)
+library(googledrive)
+library(ggplot2)
+library(knitr)
+library(kableExtra)
+library(gt)
+x1 <- fread("Lekka Beku - Form 1 (Responses).csv")
+names(copy(x1)) -> onames
+setnames(x1,c("ts","email","fullname","mob","alocward","nameleka","didspeak","wasNodOff","wcm","sept18","sixty","willing","remarks"))
+
+head(x1)
+x1[,ts:=mdy_hms(ts,tz = "Asia/Kolkata")]
+x1[,didspeak:=factor(didspeak)]
+x1[,wasNodOff:=factor(wasNodOff)]
+x1[,wcm:=factor(wcm)]
+x1[,sept18:=factor(sept18)]
+x1[,sixty:=factor(sixty)]
+x1[,willing:=factor(willing)]
+x1[,mob2:=str_remove_all(mob,"[ \\-,]") %>% str_sub(-10)]
+setkey(x1,mob2,alocward)
+x2 <- unique(x1,by=key(x1))
+x2[,ward:=str_extract(alocward,"\\d+") %>% as.numeric]
+```
+
+<br><br>
+
+#### Summary
+
+The total unique survey records after deduping on mobile and ward number were **`r nrow(x2)`**.
+
+* The number of unique WARDS  covered were `r x2[,uniqueN(ward)]`. 
+* A total of **`r x2[didspeak=="Yes",uniqueN(ward)]`** unique wards calls were picked up.
+
+* Of this, only a total of **`r x2[didspeak=="Yes" & wasNodOff == "Yes",uniqueN(ward)]`**  were answered up by nodal officers. Balance were incorrect numbers.
+
+    + A total of **`r x2[didspeak=="Yes" & wasNodOff == "Yes" & wcm %in% c("No","Not Sure"),uniqueN(ward)] `**  nodal officers are not sure if the ward committee meetings are happening regularly.
+    + A total of **`r x2[didspeak=="Yes" & wasNodOff == "Yes" & sept18 == "Yes",uniqueN(ward)] `** officers have confirmed the Sep 18 (3rd Saturday) meeting is happening, while **`r x2[didspeak=="Yes" & wasNodOff == "Yes" & sept18 == "No",uniqueN(ward)] `** officers have said NOT happening, and the balance had the following answers:
+    
+```{r sept18,results = 'asis'}
+x2[didspeak=="Yes" & wasNodOff == "Yes" & !sept18 %in%  c("Yes","No","Not Sure"),.(Ward=ward,Volunteer=fullname,`Sep 18 meeting` = sept18)] %>% 
+    arrange(Ward) %>% 
+    mutate(SN=seq_len(nrow(.))) %>% 
+    gt(rowname_col = "SN") %>% tab_header("Is the Ward Committee meeting happening on September 18th",subtitle = "All Others") %>% 
+    cols_align(align = "left") %>% cols_align(columns = "Ward",align = "right")
+```
+    
+### Top callers
+
+Following are the top callers who contacted more than one ward.
+
+
+```{r callers,results='asis'}
+gt({
+    mobs <- x2[didspeak == "Yes",.N,mob2][N>1,mob2]
+    x2[didspeak == "Yes" & mob2 %in% mobs,.(Name=first(fullname),`Wards Handled`= paste(ward,collapse = ", "),.N),mob2][,-c('mob2')][order(-N)]
+    }) %>% tab_header("Volunteers who spoke to more than one ward")
+```
+
+### Double speak
+```{r double,echo=FALSE}
+dbdt <- x2[didspeak=="Yes" & wasNodOff == "Yes" & sixty == "Yes",unique(ward)] %>% intersect(x2[didspeak=="Yes" & wasNodOff == "Yes" & sixty != "Yes",unique(ward)] ) %>% {x2[ward %in% .]} %>% setcolorder(c('ts','ward')) %>% arrange(ward)
+```
+There are `r nrow(dbdt)/2` wards contacted twice by different volunteers and their responses are a little varied.
+```{r tab_double}
+dbdt %>% 
+    select(ts,ward,fullname,wcm,sept18,sixty,remarks) %>% 
+    rename(time=ts,Name=fullname,"Ward Comm Meetings?" = wcm, "Sixty lakhs?" = sixty,'is Sep 18 happening?' = sept18) %>% 
+    mutate(sn=seq_len(nrow(dbdt))) %>% 
+    gt(rowname_col = "sn")
+```
+
+
+
+### Rs 60 lakhs funds
+
+Out of the `r x2[didspeak=="Yes" & wasNodOff == "Yes",uniqueN(ward)]` wards contacted with correct nodal officers, **`r x2[didspeak=="Yes" & wasNodOff == "Yes" & sixty == "Yes",uniqueN(ward)]` ** nodal officers were aware of the 60 lakhs scheme. 
+
+Following are the comments of volunteers where Nodal Officers were not aware of the Rs 60 lakhs:
+```{r unaware,results= 'asis'}
+x2[didspeak=="Yes" & wasNodOff == "Yes" & sixty != "Yes" & nchar(remarks) > 5,.(Name=fullname,Answer = sixty,Ward = ward,Remarks = remarks)] %>% 
+    unique(by = c("Ward"),fromLast = T) %>% 
+    arrange(Ward) %>% 
+    mutate(SN=seq_len(nrow(.))) %>% 
+    gt(rowname_col = "SN") %>% 
+    tab_header(title = onames[11])
+```
+
+
+
+
+#### Remarks on "YES" answer to Rs 60 lakhs
+
+Following are remarks captured in cases where nodal officers confirmed to be aware of the Rs 60 lakhs budget.
+
+```{r verbatim,results='asis'}
+x2[didspeak=="Yes" & wasNodOff == "Yes" & sixty == "Yes" & nchar(remarks) > 5,.(Name=fullname,Answer = sixty,Ward = ward,Remarks = remarks)] %>% 
+    arrange(Ward) %>% 
+    mutate(SN=seq_len(nrow(.))) %>% 
+    gt(rowname_col = "SN") %>% 
+    tab_header(title = onames[11])
+```
+
+
+
+### Conclusion
+```{r vars}
+correctnumb <- x2[didspeak=="Yes" & wasNodOff == "Yes",.N]
+knew <- x2[didspeak=="Yes" & wasNodOff == "Yes" & sixty=="Yes",.N]
+coop <- x2[didspeak=="Yes" & wasNodOff == "Yes" & willing=="Yes",.N]
+```
+
+The report shows a `r scales::percent(correctnumb/198)` success of calls made in terms of getting to the nodal officers. Out of the nodal officers talked to, `r scales:: percent(coop/correctnumb)` were willing to help.
+
+
+
+---------
+

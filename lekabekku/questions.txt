@@ -1,0 +1,7 @@
+code,ques
+willing,Are they willing to discuss the utilisation of the 60 lakhs with the citizens in the Ward Committee Meeting?
+sixty,Nodal Officer is aware about the Rs. 60 lakh budget?
+sep18,"Is the Ward Committee meeting happening on September 18th?"
+wcm,Are the Ward Committee meetings happening regularly in the ward?
+wasNodOff,Were they indeed the Nodal Officer for the ward?
+didspeak,Were you able to speak to the person listed as the Nodal Officer?

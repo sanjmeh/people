@@ -1,0 +1,84 @@
+---
+title: "BNP Lekkabeku"
+date: "19/09/2021"
+output: 
+    html_document:
+        css: leka.css
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(data.table)
+library(lubridate)
+library(tidyverse)
+library(magrittr)
+library(readxl)
+library(googlesheets4)
+library(googledrive)
+library(ggplot2)
+library(knitr)
+library(gt)
+library(RColorBrewer)
+x1 <- fread("Lekka Beku - Form 1 (Responses).csv")
+names(copy(x1)) -> onames
+setnames(x1,c("ts","email","fullname","mob","alocward","nameleka","didspeak","wasNodOff","wcm","sept18","sixty","willing","remarks"))
+
+x1[,ts:=mdy_hms(ts,tz = "Asia/Kolkata")]
+x1[,didspeak:=factor(didspeak)]
+x1[,wasNodOff:=factor(wasNodOff)]
+x1[,wcm:=factor(wcm)]
+x1[,sept18:=factor(sept18)]
+x1[,sixty:=factor(sixty)]
+x1[,willing:=factor(willing)]
+x1[,mob2:=str_remove_all(mob,"[ \\-,]") %>% str_sub(-10)]
+x1[,ward:=str_extract(alocward,"\\d+") %>% as.numeric]
+x1 <- x1[order(ts)]
+setkey(x1,ward)
+x2 <- unique(x1,by=key(x1),fromLast = T)
+x2[,sep18:=ifelse(sept18 %in% c("Yes","No"),as.character(sept18),"Others")]
+```
+
+<br><br>
+
+### TOTAL CALLS
+
+```{r plot1, fig.height=10, fig.width=16}
+didspk <- x2[,.(uniqueN(ward)),.(didspeak)]
+isnodoff <- x2[didspeak=="Yes",.(uniqueN(ward)),.(wasNodOff)]
+wcm <- x2[didspeak=="Yes" & wasNodOff == "Yes",.(uniqueN(ward)),.(wcm)]
+sep18 <- x2[didspeak=="Yes" & wasNodOff == "Yes",.(uniqueN(ward)),.(sep18)]
+sixty <- x2[didspeak=="Yes" & wasNodOff == "Yes",.(uniqueN(ward)),.(sixty)]
+will <- x2[didspeak=="Yes" & wasNodOff == "Yes",.(uniqueN(ward)),.(willing)]
+
+melt(didspk,id.vars = "V1") -> m1
+melt(isnodoff,id.vars = "V1") -> m2
+melt(wcm,id.vars = "V1") -> m3
+melt(sep18,id.vars = "V1") -> m4
+melt(sixty,id.vars = "V1") -> m5
+melt(will,id.vars = "V1") -> m6
+
+dt <- rbind(m6,m5,m4,m3,m2,m1)[,ans:=factor(value,levels = c("No","Not Sure","Others","Yes"),ordered = T)]
+ques <- fread("questions.txt")[, ques:= str_wrap(ques,width = 35)]
+dt2 <- ques[dt,on=.(code=variable)]
+dt2[order(code,ans)][,perc:=.SD[,V1/sum(V1)],code][,cumval:=.SD[order(ans),cumsum(V1)],code] %>% 
+ggplot(aes(ques,V1,fill=ans)) +
+    geom_col(col='grey') + 
+    geom_hline(yintercept = c(43,68,78,110,131,198),lty = 2) +
+    annotate(geom = "text",x = 0.7,y = c(47,73,83,115,136,193),label = c(43,68,78,110,131,198),size=6) +
+    
+    # geom_label(mapping = aes(variable,cumval,label = scales::percent(perc,accuracy = 1)),
+    #            label.size = NA,
+    #            nudge_y = 3,show.legend = F) + 
+    coord_flip() +
+    scale_fill_manual(values = c("No" = brewer.pal(6,name = "Set2")[2],
+                                 "Yes" = brewer.pal(6,name = "Set2")[5],
+                                 "Not Sure" = brewer.pal(6,name = "Set2")[6],
+                                 "Others" = brewer.pal(6,name = "Set2")[3])) +
+    
+    xlab(label = "Survey Question") + ylab(label = "Wards") +
+    ggtitle("Project Lekkabeku") + 
+    theme_classic(base_size = 18,base_rect_size = 3)
+
+```
+
+
