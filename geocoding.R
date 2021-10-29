@@ -43,8 +43,8 @@ build_googleapi_urls <- function(addr_vect = aptdt$google_addr){
         url_shell$query <-  list(address = x,key = apikey)
         build_url(url_shell)
     }
-    # Loop the function across all address vetors
-    addr_vect %>% map(build_addr_url)  
+    # Loop the function across all address vectors
+    addr_vect %>% map(build_addr_url)  # this gives a url list - one url per element.
 } 
 
 # this is the main function
@@ -81,7 +81,7 @@ apioutput %>%  map(pullone) %>% rbindlist
 }
 
 # pull out ward number from BPAC site - this is pretty fast - save the output in a variable
-which_ward <- function(lat=77,lon=12){
+which_ward <- function(lat=13,lon=77){
     base <- 'https://bpac.in/address.php?logi=77.6060171&lati=12.9344168'
     ulist <- parse_url(url = base)
     ulist$query = list(logi = lon,lati=lat)

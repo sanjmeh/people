@@ -1,3 +1,4 @@
+# voda and airtel spreadsheet analysis
 library(data.table)
 library(tidyverse)
 library(magrittr)
@@ -11,6 +12,17 @@ library(googledrive)
 # validmobs <- w85[nchar(`HEADOF HHD MOBILENO`)==10,`HEADOF HHD MOBILENO`] %>% unique %>% str_subset("^[6-9]") 
 
 #x1 <- fread("select_add_W-85_level4.csv")
+
+read_belandur_files <- function(){
+   x1 <- list.files("Bellandur",pattern = ".csv",full.names = T) %>% 
+        {set_names(.,value = .)} %>% 
+        map(fread,colClasses = list("character" = c("phone_number","alternate_phone") ))
+   x2 <- rbindlist(x1,fill=T,idcol = "filepath")
+    x2[,pin:=str_extract(local_address,"5\\d{5}")]
+   x2[,inside := pin %in% c(560087,560037,560035,560103)]
+   x2[,date_of_birth:=parse_date_time(date_of_birth,orders = c("dmy","mdy","ymd")) %>% as_date]
+x2
+}
 
 comb_lvls <- function(files){
     files %>% map(~fread(.x)[,file:=.x]) %>% rbindlist(fill = T)
