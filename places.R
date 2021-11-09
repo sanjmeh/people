@@ -17,7 +17,9 @@ library(tmap)
 
 apikey <- read_lines("apikey_bnpworks.txt")
 register_google(apikey)
-list_of_keywords <- c("Appartment","Apartment","Apart", "Apartment+Complex","Apartment+Building","Enclave","Housing","Villa","Residential","Residences","Homes","Condo")
+list_of_keywords <- c("Appartment","Apartment","Apart", 
+                      "Apartment+Complex","Apartment+Building","Enclave","Housing",
+                      "Villa","Residential","Residences","Homes","Condo","Layout")
 exp_keywords1 <- c("Establishment","Premise","Building")
 bbox_cvraman <- c(12.958557, 77.644929, 12.995609,77.701148) # bounding box SW and NE
 cvraman <- c(mean(bbox_cvraman[c(1,3)]),mean(bbox_cvraman[c(2,4)]) )
