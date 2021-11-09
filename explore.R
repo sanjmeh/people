@@ -95,3 +95,10 @@ upload_sheets <- function(dt,lv=4,ssid,dryrun=T){
         list1
 }
 
+# run and save all 4 matches - this will take time
+batch_exec <- function(){
+    bld$addr_compr %>% {set_names(.,.)} %>% map(~str_subset(peop1$addr_compr,.x)) %>% compact %>% saveRDS("tmp/x1_compr.RDS")
+    bld$addr_rm_vow %>% {set_names(.,.)} %>% map(~str_subset(peop1$addr_rm_vow,.x)) %>% compact %>% saveRDS("tmp/x1_novo.RDS")
+    bld$addr_rm_doub %>% {set_names(.,.)} %>% map(~str_subset(peop1$addr_rm_doub,.x)) %>% compact %>% saveRDS("tmp/x1_nodbl.RDS")
+    bld$addr_rm_vow_and_doub %>% {set_names(.,.)} %>% map(~str_subset(peop1$addr_rm_vow_and_doub,.x)) %>% compact %>% saveRDS("tmp/x1_noboth.RDS")
+}
