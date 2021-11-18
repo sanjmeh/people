@@ -12,17 +12,16 @@ library(lubridate)
 library(googlesheets4)
 library(googledrive)
 library(janitor)
-library(tmap)
+library(sf)
 
-
-apikey <- read_lines("apikey_bnpworks.txt")
+ward_kmlfile <- "BBMP-Wards-Map.kml"
+apikey <- read_lines("apikey_pranav.txt")
 register_google(apikey)
-list_of_keywords <- c("Appartment","Apartment","Apart", 
+list_of_keywords <- c("Appartment","Layout","Apartment", 
                       "Apartment+Complex","Apartment+Building","Enclave","Housing",
-                      "Villa","Residential","Residences","Homes","Condo","Layout")
+                      "Villa","Residential","Residences","Homes","Condo")
 exp_keywords1 <- c("Establishment","Premise","Building")
 bbox_cvraman <- c(12.958557, 77.644929, 12.995609,77.701148) # bounding box SW and NE
-cvraman <- c(mean(bbox_cvraman[c(1,3)]),mean(bbox_cvraman[c(2,4)]) )
 cvr <- c(12.97068, 77.70612)
 salarp <- c(12.991515009730783, 77.65998578609168)
 salarp1 <- c(12.99142115509311, 77.6596855918011)
@@ -32,9 +31,13 @@ perkm_lng <- (bbox_cvraman[4] - bbox_cvraman[2])/6.1
 perkm_lat <- (bbox_cvraman[3] - bbox_cvraman[1])/4.1
 belandur <- c(12.92287,77.68021)
 keerti <- c(12.991906401224941, 77.6590958208496)
+
+s1 <- st_read("BBMP-Wards-Map.kml")
+
 # load static maps: run this function only once to conserve API calls
 load_static_maps <- function(){
     map_full_blr <<- get_map(location = "Bangalore", zoom = 10)
+    map66_15 <<- get_map(location = "Subramanya nagar, Bengaluru",zoom = 15)
     map_beland_14 <<- get_map(location = "Bellandur Benaglore India", zoom = 14)
     map_beland_13 <<- get_map(location = "Bellandur Benaglore India", zoom = 13)
     map_keerti <<- get_map(location = rev(keerti), zoom = 15)
@@ -365,6 +368,8 @@ gen_circle_centres4 <- function(cp = centre_cvraman,m = 1000, n = 5){
         rbindlist(fill = T) %>% unique
 }
 
+
+######## MAIN scrape function usign apicode ###########
 verbose_GET <- function(urlvector){
     GET2 <- function(x){
         r <- GET(x)
@@ -389,3 +394,16 @@ extr_nextpage_tok <- function(response){
         return(content(response[[1]])$next_page_token) else return(NULL)
 }
 
+#####################
+##### Faster version of ward identification.
+##### Pass a datatable with two columns (lng, lat)
+##### Pass the KML file of wards read as a spatial object with st_read()
+##### Output will be a numeic vector of ward numbers
+######################
+find_wards <- function(dt,blr = s1){
+    if("lon" %in% names(dt) & !"lng" %in% names(dt))
+        setnames(dt,"lon","lng")
+    sf1 <- dt[,c("lng","lat")] %>% pmap(~st_point(c(.x,.y))) %>% st_as_sfc
+    st_crs(sf1) <- 4326
+    sf1 %>% st_within(blr) %>% as.numeric
+}
