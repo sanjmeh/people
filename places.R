@@ -21,14 +21,10 @@ list_of_keywords <- c("Appartment","Layout","Apartment",
                       "Apartment+Complex","Apartment+Building","Enclave","Housing",
                       "Villa","Residential","Residences","Homes","Condo")
 exp_keywords1 <- c("Establishment","Premise","Building")
-bbox_cvraman <- c(12.958557, 77.644929, 12.995609,77.701148) # bounding box SW and NE
 cvr <- c(12.97068, 77.70612)
 salarp <- c(12.991515009730783, 77.65998578609168)
-salarp1 <- c(12.99142115509311, 77.6596855918011)
 cvrpo <- c(12.985763261256892, 77.66217924286023)
 pin87 <- c(12.924203515818235, 77.7414835253186)
-perkm_lng <- (bbox_cvraman[4] - bbox_cvraman[2])/6.1
-perkm_lat <- (bbox_cvraman[3] - bbox_cvraman[1])/4.1
 belandur <- c(12.92287,77.68021)
 keerti <- c(12.991906401224941, 77.6590958208496)
 
@@ -226,29 +222,6 @@ gen_path <- function(bbox){
     )  
 }
 
-# not needed now.. as APi permits only circle radius
-plot_bb_vect <- function(bv){
-    dt <- list(
-        b1 = bv[1,,1] %>% gen_path() %>% as.data.table(),
-        b2 = bv[2,,1] %>% gen_path() %>% as.data.table(),
-        b3 = bv[3,,1] %>% gen_path() %>% as.data.table(),
-        b3 = bv[4,,1] %>% gen_path() %>% as.data.table(),
-        b3 = bv[10,,1] %>% gen_path() %>% as.data.table(),
-        b3 = bv[1,,2] %>% gen_path() %>% as.data.table(),
-        b3 = bv[1,,3] %>% gen_path() %>% as.data.table(),
-        b3 = bv[1,,4] %>% gen_path() %>% as.data.table(),
-        b3 = bv[1,,8] %>% gen_path() %>% as.data.table(),
-        b3 = bv[1,,9] %>% gen_path() %>% as.data.table(),
-        b3 = bv[1,,10] %>% gen_path() %>% as.data.table()
-    )
-        listmaps <- ggmap(g13)
-    for (i in seq_along(dt)){
-            listmaps <- 
-                listmaps + 
-                geom_path(aes(V1,V2),data = dt[[i]],col = brewer.pal(10,name = "Paired")[i])
-    }
-        print(listmaps)
-}
 
 ########## Solution from Stackoverflow https://stackoverflow.com/a/34187454/1972786 ################
 # create circles data frame from the centers data frame
