@@ -21,29 +21,43 @@ list_of_keywords <- c("Appartment","Layout","Apartment",
                       "Apartment+Complex","Apartment+Building","Enclave","Housing",
                       "Villa","Residential","Residences","Homes","Condo")
 exp_keywords1 <- c("Establishment","Premise","Building")
+
 cvr <- c(12.97068, 77.70612)
 salarp <- c(12.991515009730783, 77.65998578609168)
 cvrpo <- c(12.985763261256892, 77.66217924286023)
 pin87 <- c(12.924203515818235, 77.7414835253186)
 belandur <- c(12.92287,77.68021)
 keerti <- c(12.991906401224941, 77.6590958208496)
+bbox_cvraman <- c(12.958557, 77.644929, 12.995609,77.701148) # bounding box SW and NE
+cvr <- c(12.97068, 77.70612)
+salarp <- c(12.991515009730783, 77.65998578609168)
+salarp1 <- c(12.99142115509311, 77.6596855918011)
+cvrpo <- c(12.985763261256892, 77.66217924286023)
+perkm_lng <- (bbox_cvraman[4] - bbox_cvraman[2])/6.1
+perkm_lat <- (bbox_cvraman[3] - bbox_cvraman[1])/4.1
+belandur <- c(12.92287,77.68021)
+keerti <- c(12.991906401224941, 77.6590958208496)
 
 s1 <- st_read("BBMP-Wards-Map.kml")
+
+
+
 
 # load static maps: run this function only once to conserve API calls
 load_static_maps <- function(){
     map_full_blr <<- get_map(location = "Bangalore", zoom = 10)
+    map_full_blr12 <<- get_map(location = "Bangalore", zoom = 12)
     map66_15 <<- get_map(location = "Subramanya nagar, Bengaluru",zoom = 15)
-    map_beland_14 <<- get_map(location = "Bellandur Benaglore India", zoom = 14)
-    map_beland_13 <<- get_map(location = "Bellandur Benaglore India", zoom = 13)
-    map_keerti <<- get_map(location = rev(keerti), zoom = 15)
-    map_cvr_po <<- get_map(location = rev(cvrpo), zoom = 15)
-    map_pin87_15 <<- get_map(location = rev(pin87), zoom = 15)
-    map_pin87_14 <<- get_map(location = rev(pin87), zoom = 14)
-    map_cvr_14 <<- get_map(location = rev(cvr), zoom = 14)
-    map_cvrm_13 <<- get_map(location = rev(centre_cvraman), zoom = 13)
-    map_cvrm_12 <<- get_map(location = rev(centre_cvraman), zoom = 12)
-    map_blndr_12 <<- get_map(location = rev(belandur), zoom = 12)
+    # map_beland_14 <<- get_map(location = "Bellandur Benaglore India", zoom = 14)
+    # map_beland_13 <<- get_map(location = "Bellandur Benaglore India", zoom = 13)
+    # # map_keerti <<- get_map(location = rev(keerti), zoom = 15)
+    # map_cvr_po <<- get_map(location = rev(cvrpo), zoom = 15)
+    # map_pin87_15 <<- get_map(location = rev(pin87), zoom = 15)
+    # map_pin87_14 <<- get_map(location = rev(pin87), zoom = 14)
+    # map_cvr_14 <<- get_map(location = rev(cvr), zoom = 14)
+    # map_cvrm_13 <<- get_map(location = rev(centre_cvraman), zoom = 13)
+    # map_cvrm_12 <<- get_map(location = rev(centre_cvraman), zoom = 12)
+    # map_blndr_12 <<- get_map(location = rev(belandur), zoom = 12)
 }
 
 
