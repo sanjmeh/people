@@ -41,7 +41,7 @@ r8 %>% map(extr_all_places) %>% compact %>% rbindlist(fill = T) -> dt8
 r9 %>% map(extr_all_places) %>% compact %>% rbindlist(fill = T) -> dt9
 r10 %>% map(extr_all_places) %>% compact %>% rbindlist(fill = T) -> dt10
 rbind(dt1,dt2,dt3,dt4,dt5,dt6,dt7,dt8,dt9,dt10) -> dt.SM
-saveRDS(dt.SM,'dt.sm.rds')
+saveRDS(dt.SM,'dt.sm.rds') # change the second parameter to a file name that has your name as suffix.
 ##### DONE #########
 
 
