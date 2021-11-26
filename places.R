@@ -20,7 +20,8 @@ register_google(apikey)
 list_of_keywords <- c("Appartment","Layout","Apartment", 
                       "Apartment+Complex","Apartment+Building","Enclave","Housing",
                       "Villa","Residential","Residences","Homes","Condo")
-exp_keywords1 <- c("Establishment","Premise","Building")
+allwards <- read_lines("prio_wards.txt") %>% str_split_fixed(pattern = ",",n = 20) %>% as.numeric()
+
 
 cvr <- c(12.97068, 77.70612)
 salarp <- c(12.991515009730783, 77.65998578609168)
@@ -45,19 +46,19 @@ s1 <- st_read("BBMP-Wards-Map.kml")
 
 # load static maps: run this function only once to conserve API calls
 load_static_maps <- function(){
-    map_full_blr <<- get_map(location = "Bangalore", zoom = 10)
+    map_full_blr11 <<- get_map(location = "Bangalore", zoom = 11)
     map_full_blr12 <<- get_map(location = "Bangalore", zoom = 12)
     map66_15 <<- get_map(location = "Subramanya nagar, Bengaluru",zoom = 15)
-    # map_beland_14 <<- get_map(location = "Bellandur Benaglore India", zoom = 14)
-    # map_beland_13 <<- get_map(location = "Bellandur Benaglore India", zoom = 13)
-    # # map_keerti <<- get_map(location = rev(keerti), zoom = 15)
-    # map_cvr_po <<- get_map(location = rev(cvrpo), zoom = 15)
-    # map_pin87_15 <<- get_map(location = rev(pin87), zoom = 15)
-    # map_pin87_14 <<- get_map(location = rev(pin87), zoom = 14)
-    # map_cvr_14 <<- get_map(location = rev(cvr), zoom = 14)
-    # map_cvrm_13 <<- get_map(location = rev(centre_cvraman), zoom = 13)
-    # map_cvrm_12 <<- get_map(location = rev(centre_cvraman), zoom = 12)
-    # map_blndr_12 <<- get_map(location = rev(belandur), zoom = 12)
+    map_beland_14 <<- get_map(location = "Bellandur Benaglore India", zoom = 14)
+    map_beland_13 <<- get_map(location = "Bellandur Benaglore India", zoom = 13)
+    # map_keerti <<- get_map(location = rev(keerti), zoom = 15)
+    map_cvr_po <<- get_map(location = rev(cvrpo), zoom = 15)
+    map_pin87_15 <<- get_map(location = rev(pin87), zoom = 15)
+    map_pin87_14 <<- get_map(location = rev(pin87), zoom = 14)
+    map_cvr_14 <<- get_map(location = rev(cvr), zoom = 14)
+    map_cvrm_13 <<- get_map(location = rev(centre_cvraman), zoom = 13)
+    map_cvrm_12 <<- get_map(location = rev(centre_cvraman), zoom = 12)
+    map_blndr_12 <<- get_map(location = rev(belandur), zoom = 12)
 }
 
 
@@ -358,12 +359,17 @@ gen_circle_centres4 <- function(cp = centre_cvraman,m = 1000, n = 5){
 
 ######## MAIN scrape function usign apicode ###########
 verbose_GET <- function(urlvector){
+    resp <- list()
     GET2 <- function(x){
         r <- GET(x)
         if(r$status_code == 200) cat(content(r)$result %>% length(),",",sep = "") else cat("E,")
         return(r)
     }
-urlvector %>% map(GET2)
+for(i in urlvector){
+    Sys.sleep(rnorm(1,3,sd = 3) %>% max(0,.))
+    resp <- c(resp,list(GET2(i)))
+}
+    resp
 }
 
 build_nextpage <- function(token){
@@ -394,3 +400,30 @@ find_wards <- function(dt,blr = s1){
     st_crs(sf1) <- 4326
     sf1 %>% st_within(blr) %>% as.numeric
 }
+
+cen <- function(wardno = 174) dt_centroids[ward == wardno,.(lat,lng)] %>% as.numeric()
+
+plot_prio_wards <- function(mapobj = map_full_blr11,wnos = c(1:8),ncir = 25, met = 400, cen = 113){
+    blr_cen <- dt_centroids[ward == cen,.(lat,lng)] %>% as.numeric()
+    names(wnos) <- wnos
+    borders <- function(n) s1[allwards[n],] %>% st_coordinates() %>% as.data.table()
+    nborders <- wnos %>% map(borders) %>% rbindlist(idcol = "index")
+    polyborders <- 1:20 %>% map(borders) %>% rbindlist(idcol = "index")
+    ggmap(mapobj) +  
+       # geom_polygon(aes(X,Y,group = index),alpha = 0.5,data = polyborders)  + 
+        geom_path(aes(X,Y,group = index),data = nborders) +
+        geom_label(aes(lng,lat,label = ward),data = dt_centroids[ward %in% allwards]) +
+        geom_point(aes(lng,lat,col = who),data = dtcen3[sample(seq_len(nrow(dtcen3)),size = 1000)],alpha = 0.5)
+}
+
+plot_communities <- function(placedt = places1,mapobj = map_full_blr11){
+    borders <- function(n) s1[allwards[n],] %>% st_coordinates() %>% as.data.table()
+    nborders <- 1:20 %>% map(borders) %>% rbindlist(idcol = "index")
+    polyborders <- 1:20 %>% map(borders) %>% rbindlist(idcol = "index")
+    ggmap(mapobj) +  
+         geom_polygon(aes(X,Y,group = index),alpha = 0.5,data = polyborders)  + 
+        geom_path(aes(X,Y,group = index),data = nborders) +
+        geom_label(aes(lng,lat,label = ward),data = dt_centroids[ward %in% allwards]) +
+        geom_point(aes(lng,lat,col = factor(ward)),data = placedt,alpha = 0.5)
+}
+
