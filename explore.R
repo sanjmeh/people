@@ -13,17 +13,26 @@ library(googledrive)
 
 #x1 <- fread("select_add_W-85_level4.csv")
 
-read_belandur_files <- function(){
-   x1 <- list.files("Bellandur",pattern = ".csv",full.names = T) %>% 
+# After loading all telecom csv files in a subfolder in current dir run this
+# code to pick each file and read them into a common data.table that is the
+# output
+read_telecom_files <- function(subdir = "w66"){
+    x2 <- list.files(path = subdir,pattern = ".csv",full.names = T) %>% 
         {set_names(.,value = .)} %>% 
-        map(fread,colClasses = list("character" = c("phone_number","alternate_phone") ))
-   x2 <- rbindlist(x1,fill=T,idcol = "filepath")
-    x2[,pin:=str_extract(local_address,"5\\d{5}")]
-   x2[,inside := pin %in% c(560087,560037,560035,560103)]
-   x2[,date_of_birth:=parse_date_time(date_of_birth,orders = c("dmy","mdy","ymd")) %>% as_date]
-x2
+        map(fread,colClasses = "character") %>% 
+        rbindlist(x1,fill=T,idcol = "filepath")
 }
 
+# pass the output of the unified database through this function to flag records
+# on the desired pincodes and also type converts a few columns
+clean_dt_telecom <- function(x2,flagpin = c(560010,560021,560055)){
+    x2[,pin:=str_extract(local_address,"5\\d{5}")]
+    x2[,inside := pin %in% flagpin]
+    x2[,date_of_birth:=parse_date_time(date_of_birth,orders = c("dmy","mdy","ymd")) %>% as_date]
+    x2
+}
+
+# another way to read several files with file column that does not rely on rbindlist idcol.
 comb_lvls <- function(files){
     files %>% map(~fread(.x)[,file:=.x]) %>% rbindlist(fill = T)
 }
@@ -32,15 +41,16 @@ comb_lvls <- function(files){
 combine_files <- function(dirpath){
 dt1 <- list.files(path = dirpath,pattern = "lev\\d.csv",full.names = T) %>% comb_lvls()
 dt1[,lev:=str_extract(file,"\\d.csv") %>% str_extract("\\d")]
-# Once the operator column is added by name "oper" in the initial clustering we can remove this line
+# Once the operator column is added by name "oper" in the initial clustering we
+# can remove this line
 dt1[,oper:=str_extract(file,"(?<=/).*(?=_)")]
 dt1[,mobile:=as.character(`Phone number`)]
 }
 
 
 
-# add a new column to the combined dt that is apartment name with the sequence ready for dedupe
-# output will be for a certan level (4 is preferred)
+# add a new column to the combined dt that is apartment name with the sequence
+# ready for dedupe output will be for a certan level (4 is preferred)
 add_clust_seq <- function(dt,lv=4){
     dt2 <- dt[lev==lv]
     # Generate the sequence of apartments in ascending order of rows
@@ -102,3 +112,4 @@ batch_exec <- function(){
     bld$addr_rm_doub %>% {set_names(.,.)} %>% map(~str_subset(peop1$addr_rm_doub,.x)) %>% compact %>% saveRDS("tmp/x1_nodbl.RDS")
     bld$addr_rm_vow_and_doub %>% {set_names(.,.)} %>% map(~str_subset(peop1$addr_rm_vow_and_doub,.x)) %>% compact %>% saveRDS("tmp/x1_noboth.RDS")
 }
+
