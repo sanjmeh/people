@@ -357,7 +357,7 @@ gen_circle_centres4 <- function(cp = centre_cvraman,m = 1000, n = 5){
 }
 
 
-######## MAIN scrape function usign apicode ###########
+######## MAIN scrape function to GET neraby locations ###########
 verbose_GET <- function(urlvector){
     resp <- list()
     GET2 <- function(x){
@@ -366,8 +366,9 @@ verbose_GET <- function(urlvector){
         return(r)
     }
 for(i in urlvector){
-    Sys.sleep(rnorm(1,3,sd = 3) %>% max(0,.))
-    resp <- c(resp,list(GET2(i)))
+    # sleep for a variable number of seconds with a mean of 2 seconds
+    Sys.sleep(rnorm(1,mean = 2,sd = 3) %>% max(0,.))
+    resp <- c(resp,list(GET2(i))) # join the response to the master array of responses
 }
     resp
 }
