@@ -5,7 +5,8 @@ library(magrittr)
 library(readxl)
 library(googlesheets4)
 library(googledrive)
-
+library(stringr)
+if(!interactive()) print("exlore.R loaded in background")
 #w85 <- read_excel("~/Downloads/W-85.xlsx")
 # x1 <- fread("~/Downloads/Voda 37.csv")
 # x2 <- fread("~/Downloads/Airtel 37.csv")
@@ -113,3 +114,88 @@ batch_exec <- function(){
     bld$addr_rm_vow_and_doub %>% {set_names(.,.)} %>% map(~str_subset(peop1$addr_rm_vow_and_doub,.x)) %>% compact %>% saveRDS("tmp/x1_noboth.RDS")
 }
 
+# Pass the google drive path from where to download all csv files into the dest
+# subdirectory which should be empty at this time
+download_matched_files <- function(drivepath = "https://drive.google.com/drive/folders/1mBNPzKsMNb85IELi1k7Eas9O_aQvRWo-", dest = "matchedcsv"){
+    setDT(lsraw)
+    if(!grepl(dest,getwd())) setwd(dest)
+    cat("Starting to read all files in google drive link...")
+    lsraw <- googledrive::drive_ls(drivepath)
+    stopifnot(list.files(".") %>% length() == 0)
+    cat("done")
+    tryCatch({
+    csvfile_ids <- lsraw[grepl("csv$",name),id]
+    csvfile_ids %>% map(drive_download)
+    },finally = setwd(".."))
+    setwd("..")
+}
+
+# change into the sub directory containing csv files with the matched people
+# database downloaded in community level csv files. On executing this function,
+# a zip file will be created int he current directory with the whatsApp template
+# ( as saved in ~/Downloads) and the same number of csv files.
+to_whatsapp_template <- function(n = "ALL"){
+    wcols = fread("~/Downloads/new_contacts_bnp_template.csv") %>% names 
+    x1 <- 
+        list.files(pattern = ".csv$") %>% {if(n!= "ALL") .[seq_len(n)] else .} %>% 
+        set_names(.,.) %>% 
+        map(fread) %>% 
+        imap(~rename(.x, mobile_number = phone_number) %>% 
+                 mutate(groups = .y,salutation = map(name,str_to_name)) %>% 
+                 select(wcols))
+    if(dir.exists("tmp")){
+        message("Existing tmp directory will be overwritten if any filename is repeated")
+        if(readline("Proceed y/n?: ") =="n")
+             stop("Aborting")
+    } else
+        dir.create("tmp")
+    cat("Started processng..")
+    x1 %>% imap(~fwrite(.x,file = paste("tmp/WA",.y,sep = "_")))
+    cat("DONE")
+    cat("\nzipping files...")
+    zip(zipfile = "whatsapp.zip",files = list.files(path = "tmp",full.names = T))
+    cat("zipped and saved in current directory")
+}
+
+# search a string vector v1 in another vector v2 and if v1 found in v2 prefer that else prefer the first element of v1
+takefirst <- function(v1,v2){
+    if(any(v1 %in% v2)) return(v1[v1 %in% v2][1]) else return(v1[1])
+}
+
+# transforms a string vector into a name (single word) and comma and outputs a
+# table with two columns : original name and the name to be used for whatsapp
+# messages
+str_to_name <- function(x,msize = 3){
+    y <- str_remove_all(x,"[:punct:]*") %>% str_trim # remove all punctuation and trim of leading and trailing spaces
+    words <- str_split(y,"\\s+") # Split the name string on white spaces
+    lc_words <- words %>% map(tolower) # Convert all to lower case
+    
+    # remove all likely salutation strings
+    clean_lc_words <- 
+        lc_words %>% 
+        map(
+            ~ { 
+                if(.x[1] %in%  c("mr","mrs","ms","dr", "prof","smt", "shri","sri") )
+                return(.x[-1]) else
+                    return(.x)
+            }
+            )
+    # Take the first long word as the name for salutation (default max size
+    # argument has a value equal to 3). Convert the name to title case and
+    # output a data.table with original and final name
+    first_long_word <- clean_lc_words %>% map(~.x[nchar(.x) > msize][1]) %>% str_to_title() %>% paste0(",")
+    data.table(orig = x, salut = first_long_word)
+}
+
+
+# change into the sub directory containing csv files with the matched people
+# database downloaded in community level csv files. On executing this function,
+# a summary csv will be created community name wise.
+files_summary <- function(n = "ALL"){
+    x1 <- 
+        list.files(pattern = ".csv$") %>% {if(n!= "ALL") .[seq_len(n)] else .} %>% 
+        set_names(.,.) %>% 
+        map(fread,colClasses = "character") %>% 
+        rbindlist(fill=T,idcol = "filepath")
+    x1
+}
