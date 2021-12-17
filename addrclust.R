@@ -21,7 +21,7 @@ load("keys.data")
 `%notin%` <- function(lhs, rhs) !(lhs %in% rhs)
 
 
-# input an address vector to get a address vector with + signs in between
+# NOW THIS IS from AWS server: input an address vector to get a address vector with + signs in between
 prep_addr <- function(addstr,bangalore=T){
   str2 <- addstr %>% str_replace_all("[#,&]"," ") %>% 
     str_trim %>% str_replace_all("\\s+","+") %>% 
