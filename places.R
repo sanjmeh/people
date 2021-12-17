@@ -15,7 +15,7 @@ library(janitor)
 library(sf)
 
 ward_kmlfile <- "BBMP-Wards-Map.kml"
-apikey <- read_lines("apikey_pranav.txt")
+apikey <- read_lines("apikey_srikanth.txt")
 register_google(apikey)
 list_of_keywords <- c("Appartment","Layout","Apartment", 
                       "Apartment+Complex","Apartment+Building","Enclave","Housing",
@@ -56,8 +56,6 @@ load_static_maps <- function(){
     map_pin87_15 <<- get_map(location = rev(pin87), zoom = 15)
     map_pin87_14 <<- get_map(location = rev(pin87), zoom = 14)
     map_cvr_14 <<- get_map(location = rev(cvr), zoom = 14)
-    map_cvrm_13 <<- get_map(location = rev(centre_cvraman), zoom = 13)
-    map_cvrm_12 <<- get_map(location = rev(centre_cvraman), zoom = 12)
     map_blndr_12 <<- get_map(location = rev(belandur), zoom = 12)
 }
 
