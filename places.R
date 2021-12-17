@@ -13,15 +13,13 @@ library(googlesheets4)
 library(googledrive)
 library(janitor)
 library(sf)
-
 ward_kmlfile <- "BBMP-Wards-Map.kml"
-apikey <- read_lines("apikey_pranav.txt")
+apikey <- read_lines("apikey_srikanth.txt")
 register_google(apikey)
 list_of_keywords <- c("Appartment","Layout","Apartment", 
                       "Apartment+Complex","Apartment+Building","Enclave","Housing",
                       "Villa","Residential","Residences","Homes","Condo")
 allwards <- read_lines("prio_wards.txt") %>% str_split_fixed(pattern = ",",n = 20) %>% as.numeric()
-
 
 cvr <- c(12.97068, 77.70612)
 salarp <- c(12.991515009730783, 77.65998578609168)
@@ -40,7 +38,14 @@ belandur <- c(12.92287,77.68021)
 keerti <- c(12.991906401224941, 77.6590958208496)
 
 s1 <- st_read("BBMP-Wards-Map.kml")
+s1_geom <- st_geometry(s1)
+dt_centroids <- 1:198 %>% 
+    map(~s1_geom[[.x]] %>% 
+            st_centroid %>% 
+            as.numeric) %>% 
+    unlist %>% matrix(ncol=2,byrow = T) %>% as.data.table  %>% setnames(c("lng","lat"))
 
+dt_centroids[,ward:=find_wards(dt_centroids)]
 
 
 
@@ -48,17 +53,17 @@ s1 <- st_read("BBMP-Wards-Map.kml")
 load_static_maps <- function(){
     map_full_blr11 <<- get_map(location = "Bangalore", zoom = 11)
     map_full_blr12 <<- get_map(location = "Bangalore", zoom = 12)
-    map66_15 <<- get_map(location = "Subramanya nagar, Bengaluru",zoom = 15)
-    map_beland_14 <<- get_map(location = "Bellandur Benaglore India", zoom = 14)
-    map_beland_13 <<- get_map(location = "Bellandur Benaglore India", zoom = 13)
+    # map66_15 <<- get_map(location = "Subramanya nagar, Bengaluru",zoom = 15)
+    # map_beland_14 <<- get_map(location = "Bellandur Benaglore India", zoom = 14)
+    # map_beland_13 <<- get_map(location = "Bellandur Benaglore India", zoom = 13)
     # map_keerti <<- get_map(location = rev(keerti), zoom = 15)
-    map_cvr_po <<- get_map(location = rev(cvrpo), zoom = 15)
-    map_pin87_15 <<- get_map(location = rev(pin87), zoom = 15)
-    map_pin87_14 <<- get_map(location = rev(pin87), zoom = 14)
-    map_cvr_14 <<- get_map(location = rev(cvr), zoom = 14)
-    map_cvrm_13 <<- get_map(location = rev(centre_cvraman), zoom = 13)
-    map_cvrm_12 <<- get_map(location = rev(centre_cvraman), zoom = 12)
-    map_blndr_12 <<- get_map(location = rev(belandur), zoom = 12)
+    # map_cvr_po <<- get_map(location = rev(cvrpo), zoom = 15)
+    # map_pin87_15 <<- get_map(location = rev(pin87), zoom = 15)
+    # map_pin87_14 <<- get_map(location = rev(pin87), zoom = 14)
+    # map_cvr_14 <<- get_map(location = rev(cvr), zoom = 14)
+    # map_cvrm_13 <<- get_map(location = rev(centre_cvraman), zoom = 13)
+    # map_cvrm_12 <<- get_map(location = rev(centre_cvraman), zoom = 12)
+    # map_blndr_12 <<- get_map(location = rev(belandur), zoom = 12)
 }
 
 
@@ -238,9 +243,9 @@ gen_path <- function(bbox){
 }
 
 
-########## Solution from Stackoverflow https://stackoverflow.com/a/34187454/1972786 ################
-# create circles data frame from the centers data frame
-# remember radius is in Kms
+########## Solution from Stackoverflow
+# https://stackoverflow.com/a/34187454/1972786 : create circles data frame from
+# the centers data frame remember radius is in Kms
 make_circles <- function(centers, radius, nPoints = 100){
     if(!"lat" %in% names(centers)) message("Input Dt does not contain mandatory column: lat")
     if("lon" %in% names(centers)){
@@ -388,6 +393,10 @@ extr_nextpage_tok <- function(response){
         return(content(response[[1]])$next_page_token) else return(NULL)
 }
 
+build_nextpage_urls <- function(tokens){
+    tokens %>% map_chr(build_nextpage)
+}
+
 #####################
 ##### Faster version of ward identification.
 ##### Pass a datatable with two columns (lng, lat)
@@ -428,3 +437,19 @@ plot_communities <- function(placedt = places1,mapobj = map_full_blr11){
         geom_point(aes(lng,lat,col = factor(ward)),data = placedt,alpha = 0.5)
 }
 
+filter_prio_wards <-  function(dt){
+    if(!"ward" %in% names(dt) & "lng" %in% names(dt) & "lat" %in% names(dt)){
+        message("ward column missing, being calculated and added")   
+        dt[,ward:=find_wards(dt)]
+    }
+    dt[ward %in% allwards]
+}
+
+get_cen_residue <- function(dtscrape,dtcen){
+    dtcen %>% unique(by= c("lat","lng","k")) %>% rename(cp_lat = "lat",cp_lng = "lng",keyword = "k") ->  dtcen.u
+    dtscrape  %>% filter(!is.na(name)) %>% select(cp_lat,cp_lng,keyword,name) %>% unique(by = c("cp_lat","cp_lng","keyword")) -> dtscrape.u
+    dtscrape.u %>% 
+        right_join(dtcen.u,by = c("cp_lat", "cp_lng","keyword")) %>% 
+        filter(is.na(name)) %>% 
+        select(cp_lat,cp_lng,keyword) 
+}
