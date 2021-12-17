@@ -65,6 +65,7 @@ fselect_in <- function(x, ref, d = 10){
 load_static_maps <- function(){
     map_full_blr11 <<- get_map(location = "Bangalore", zoom = 11)
     map_full_blr12 <<- get_map(location = "Bangalore", zoom = 12)
+    map_blr174 <<- get_map(location = rev(cen(174)), zoom = 14)
     # map66_15 <<- get_map(location = "Subramanya nagar, Bengaluru",zoom = 15)
     # map_beland_14 <<- get_map(location = "Bellandur Benaglore India", zoom = 14)
     # map_beland_13 <<- get_map(location = "Bellandur Benaglore India", zoom = 13)
@@ -384,7 +385,7 @@ verbose_GET <- function(urlvector){
     }
 for(i in urlvector){
     # sleep for a variable number of seconds with a mean of 2 seconds
-    Sys.sleep(rnorm(1,mean = 2,sd = 3) %>% max(0,.))
+    Sys.sleep(rnorm(1,mean = 10,sd = 20) %>% max(0,.))
     resp <- c(resp,list(GET2(i))) # join the response to the master array of responses
 }
     resp
@@ -425,17 +426,22 @@ find_wards <- function(dt,blr = s1){
 
 cen <- function(wardno = 174) dt_centroids[ward == wardno,.(lat,lng)] %>% as.numeric()
 
-plot_prio_wards <- function(mapobj = map_full_blr11,wnos = c(1:8),ncir = 25, met = 400, cen = 113){
-    blr_cen <- dt_centroids[ward == cen,.(lat,lng)] %>% as.numeric()
-    names(wnos) <- wnos
+# plot ward borders and shade them basis apartment counts. Pass the scraped data
+# till now across all wards (read from RDS if needed)
+plot_prio_wards <- function(mapobj = map_full_blr11,scrapeddt){
+    
+    ward.index <- seq_along(allwards)
+    names(ward.index) <- allwards
+    warddata <- scrapeddt[,.(countapp = .N),ward] # summarise on count of appts per ward
     borders <- function(n) s1[allwards[n],] %>% st_coordinates() %>% as.data.table()
-    nborders <- wnos %>% map(borders) %>% rbindlist(idcol = "index")
-    polyborders <- 1:20 %>% map(borders) %>% rbindlist(idcol = "index")
+    wardborders <- ward.index %>% map(borders) %>% rbindlist(idcol = "ward") %>% mutate(ward = as.numeric(ward))
+    data <- warddata[wardborders,on= "ward"]
     ggmap(mapobj) +  
-       # geom_polygon(aes(X,Y,group = index),alpha = 0.5,data = polyborders)  + 
-        geom_path(aes(X,Y,group = index),data = nborders) +
-        geom_label(aes(lng,lat,label = ward),data = dt_centroids[ward %in% allwards]) +
-        geom_point(aes(lng,lat,col = who),data = dtcen3[sample(seq_len(nrow(dtcen3)),size = 1000)],alpha = 0.5)
+        geom_polygon(aes(X,Y,group = ward, fill = countapp),alpha = 0.5,data = data)  + 
+        scale_fill_binned(type = "viridis") +
+        geom_path(aes(X,Y,group = ward),data = data) +
+        geom_label(aes(lng,lat,label = ward),data = dt_centroids[ward %in% allwards])
+        #geom_point(aes(lng,lat,col = ward),data = dtcen[sample(seq_len(nrow(dtcen)),size = 1000)],alpha = 0.5)
 }
 
 plot_communities <- function(placedt = places1,mapobj = map_full_blr11){
