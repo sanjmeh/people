@@ -47,7 +47,19 @@ dt_centroids <- 1:198 %>%
 
 dt_centroids[,ward:=find_wards(dt_centroids)]
 
+# operator to check inclusion of a real number in another set of real numbers with a small tolerance
+`%~%` <- function(x,y) {
+    out <- logical(length(x))
+    for(i in 1:length(x)) out[i] <- any(abs(x[i] - y) <= 1e-6)
+    out
+}
 
+# another function to check match of a real number vector with any element of
+# another real number vector with a 10 decimal rounding, to account for
+# tolerance
+fselect_in <- function(x, ref, d = 10){
+    round(x, digits=d) %in% round(ref, digits=d)
+}
 
 # load static maps: run this function only once to conserve API calls
 load_static_maps <- function(){
