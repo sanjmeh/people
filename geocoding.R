@@ -66,7 +66,7 @@ pullone <- function(x){
         loctype = cont$geometry$location_type,
         subloc1 = cont$results[[1]]$address_components[[3]]$long_name,
         subloc2 = cont$results[[1]]$address_components[[2]]$long_name,
-        landmark = cont$results[[1]]$address_components %>% 
+        landmark = cont$results[[1]]$address_components %>% # difficult to comprehend this now :-)
             map_chr(~.x$types %>% paste(collapse = "/")) %>% 
             str_detect("landmark") %>% 
             {cont$results[[1]]$address_components %>% 
