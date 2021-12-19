@@ -45,6 +45,21 @@ dt_centroids <- 1:198 %>%
             as.numeric) %>% 
     unlist %>% matrix(ncol=2,byrow = T) %>% as.data.table  %>% setnames(c("lng","lat"))
 
+#####################
+##### Faster version of ward identification.
+##### Pass a datatable with two columns (lng, lat)
+##### Pass the KML file of wards read as a spatial object with st_read()
+##### Output will be a numeic vector of ward numbers
+######################
+find_wards <- function(dt,blr = s1){
+    if("lon" %in% names(dt) & !"lng" %in% names(dt))
+        setnames(dt,"lon","lng")
+    sf1 <- dt[,c("lng","lat")] %>% pmap(~st_point(c(.x,.y))) %>% st_as_sfc
+    st_crs(sf1) <- 4326
+    sf1 %>% st_within(blr) %>% as.numeric
+}
+
+
 dt_centroids[,ward:=find_wards(dt_centroids)]
 
 cen <- function(wardno = 174) dt_centroids[ward == wardno,.(lat,lng)] %>% as.numeric()
@@ -414,19 +429,6 @@ build_nextpage_urls <- function(tokens){
     tokens %>% map_chr(build_nextpage)
 }
 
-#####################
-##### Faster version of ward identification.
-##### Pass a datatable with two columns (lng, lat)
-##### Pass the KML file of wards read as a spatial object with st_read()
-##### Output will be a numeic vector of ward numbers
-######################
-find_wards <- function(dt,blr = s1){
-    if("lon" %in% names(dt) & !"lng" %in% names(dt))
-        setnames(dt,"lon","lng")
-    sf1 <- dt[,c("lng","lat")] %>% pmap(~st_point(c(.x,.y))) %>% st_as_sfc
-    st_crs(sf1) <- 4326
-    sf1 %>% st_within(blr) %>% as.numeric
-}
 
 
 
