@@ -47,6 +47,8 @@ dt_centroids <- 1:198 %>%
 
 dt_centroids[,ward:=find_wards(dt_centroids)]
 
+cen <- function(wardno = 174) dt_centroids[ward == wardno,.(lat,lng)] %>% as.numeric()
+
 # operator to check inclusion of a real number in another set of real numbers with a small tolerance
 `%~%` <- function(x,y) {
     out <- logical(length(x))
@@ -122,6 +124,7 @@ build_urls_nearby <- function(dt_latlng,rad = 500){
     dt_latlng %>% pmap_chr(~cr_url(lat = ..1,lng = ..2, word = ..3))  
 } 
 
+# 
 build_url_details <- function(placeids){
     cr_url <- function(placeid){
         url <- urls_places["details"]
@@ -134,7 +137,7 @@ build_url_details <- function(placeids){
     placeids %>% map_chr(cr_url)
 }
 
-# pass a vector of placeids to get formatted address including pincode
+# seems formatted_address is not returned by nearby API, so you will get a NULL
 extr_formatted_addr <- function(resp){
     x2 <- content(resp)
     if(x2$status == "OK"){
@@ -143,28 +146,28 @@ extr_formatted_addr <- function(resp){
 }
 
 extr_names <- function(resp){
-    x2 <- resp[[1]] %>% content
+    x2 <- resp %>% content
     result_length <- length(x2$results)
     seq_len(result_length) %>% 
         map_chr(~x2$results[[.x]]$name)
 }
 
 extr_vicinity <- function(resp){
-    x2 <- resp[[1]] %>% content
+    x2 <- resp %>% content
     result_length <- length(x2$results)
     seq_len(result_length) %>% 
         map_chr(~x2$results[[.x]]$vicinity)
 }
 
 extr_placeid <- function(resp){
-    x2 <- resp[[1]] %>% content
+    x2 <- resp %>% content
     result_length <- length(x2$results)
     seq_len(result_length) %>% 
         map_chr(~x2$results[[.x]]$place_id)
 }
 
 extr_geo <- function(resp){
-    x2 <- resp[[1]] %>% content
+    x2 <- resp %>% content
     result_length <- length(x2$results)
     # lat <- seq_len(result_length) %>% 
     #     map_dbl(~x2$results[[.x]]$geometry$location$lat)
@@ -175,7 +178,7 @@ extr_geo <- function(resp){
         # simplified now
     return(seq_len(result_length) %>% map(~x2$results[[.x]]$geometry$location %>% as.data.table()) %>% rbindlist())
 }
-# pass the output of one GET content
+# doesnt work on the places/details api results.. need to be tested again
 extract_details <- function(x2){
     # candidates_searched <- x2$candidates %>% length()
     # if(candidates_searched > 0){
@@ -385,7 +388,7 @@ verbose_GET <- function(urlvector){
     }
 for(i in urlvector){
     # sleep for a variable number of seconds with a mean of 2 seconds
-    Sys.sleep(rnorm(1,mean = 10,sd = 20) %>% max(0,.))
+    Sys.sleep(rnorm(1,mean = 5,sd = 20) %>% max(0,.))
     resp <- c(resp,list(GET2(i))) # join the response to the master array of responses
 }
     resp
@@ -400,7 +403,8 @@ build_nextpage <- function(token){
    build_url(baseurl)
 }
 
-# pass one response of nearby search to extract next page token if it exists
+# pass one response of nearby search to extract next page token if it exists:
+# this is not so useful as we get nextpage token from the final DT also,
 extr_nextpage_tok <- function(response){
     if("next_page_token" %in% names(content(response[[1]])))
         return(content(response[[1]])$next_page_token) else return(NULL)
@@ -424,7 +428,7 @@ find_wards <- function(dt,blr = s1){
     sf1 %>% st_within(blr) %>% as.numeric
 }
 
-cen <- function(wardno = 174) dt_centroids[ward == wardno,.(lat,lng)] %>% as.numeric()
+
 
 # plot ward borders and shade them basis apartment counts. Pass the scraped data
 # till now across all wards (read from RDS if needed)
@@ -471,3 +475,13 @@ get_cen_residue <- function(dtscrape,dtcen){
         filter(is.na(name)) %>% 
         select(cp_lat,cp_lng,keyword) 
 }
+
+# Generate single ward centers by uncommenting
+
+#gen_circle_centres4(cp = cen(174),m = 200,n = 25) -> dtcen1
+#dtcen174 <- dtcen1[,ward:=find_wards(dtcen1)][ward==174]
+
+# dtcen174 %>% build_urls_nearby(rad = 100) %>% verbose_GET() -> r174
+# saveRDS(r174,"resp174")
+
+
